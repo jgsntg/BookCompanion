@@ -1,40 +1,18 @@
 import Link from "next/link";
-import Image from "next/image";
-import { getDb } from "@/lib/db";
+import { listLibraryBooks, LibraryBookRow } from "@/lib/db";
 
-interface BookRow {
-  id: number;
-  title: string;
-  author: string;
-  reading_status: "want_to_read" | "reading" | "finished" | "abandoned";
-  rating: number | null;
-  cover_url: string | null;
-  is_ingested: number;
-  finished_at: string | null;
-  created_at: string;
-  chunk_count: number;
-}
+export const dynamic = "force-dynamic";
 
-const STATUS_ORDER: BookRow["reading_status"][] = ["reading", "want_to_read", "finished", "abandoned"];
-const STATUS_LABEL: Record<BookRow["reading_status"], string> = {
+const STATUS_ORDER: LibraryBookRow["reading_status"][] = ["reading", "want_to_read", "finished", "abandoned"];
+const STATUS_LABEL: Record<LibraryBookRow["reading_status"], string> = {
   reading: "Reading",
   want_to_read: "Want to read",
   finished: "Finished",
   abandoned: "Abandoned",
 };
 
-export default function HomePage() {
-  const db = getDb();
-  const books = db
-    .prepare(`
-      SELECT
-        b.id, b.title, b.author, b.reading_status, b.rating, b.cover_url,
-        b.is_ingested, b.finished_at, b.created_at,
-        (SELECT COUNT(*) FROM chunks WHERE book_id = b.id) AS chunk_count
-      FROM books b
-      ORDER BY COALESCE(b.finished_at, b.updated_at) DESC
-    `)
-    .all() as BookRow[];
+export default async function HomePage() {
+  const books = await listLibraryBooks();
 
   const grouped = STATUS_ORDER.map((status) => ({
     status,

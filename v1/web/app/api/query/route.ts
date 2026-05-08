@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, serializeVector } from "@/lib/db";
+import { getBook, matchChunks } from "@/lib/db";
 import { embedQuery } from "@/lib/embeddings";
 import { synthesize, RetrievedChunk } from "@/lib/synthesize";
 
@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing bookId" }, { status: 400 });
     }
 
-    const db = getDb();
+    const numericBookId = Number(bookId);
+    if (!Number.isInteger(numericBookId)) {
+      return NextResponse.json({ error: "Book not found" }, { status: 404 });
+    }
 
-    const book = db
-      .prepare("SELECT id, title, author, book_type FROM books WHERE id = ?")
-      .get(bookId) as { id: number; title: string; author: string; book_type: string | null } | undefined;
-
+    const book = await getBook(numericBookId);
     if (!book) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
@@ -29,43 +29,12 @@ export async function POST(req: NextRequest) {
     // Embed the question with input_type="query" (matters for retrieval quality)
     const queryEmbedding = await embedQuery(question);
 
-    // KNN over chunks scoped to this book.
-    // sqlite-vec's vec0 doesn't support WHERE on payload columns directly,
-    // so we filter via JOIN to chunks + chapters.
-    const rows = db
-      .prepare(`
-        SELECT
-          c.chunk_type,
-          c.content,
-          c.payload,
-          c.chapter_number,
-          ch.title AS chapter_title,
-          b.title AS book_title,
-          b.author AS book_author,
-          v.distance AS distance
-        FROM chunk_vectors v
-        JOIN chunks c ON c.id = v.chunk_id
-        JOIN chapters ch ON ch.id = c.chapter_id
-        JOIN books b ON b.id = c.book_id
-        WHERE v.embedding MATCH ?
-          AND c.book_id = ?
-          AND k = ?
-        ORDER BY v.distance
-      `)
-      .all(serializeVector(queryEmbedding), bookId, TOP_K) as Array<{
-        chunk_type: string;
-        content: string;
-        payload: string;
-        chapter_number: number;
-        chapter_title: string | null;
-        book_title: string;
-        book_author: string;
-        distance: number;
-      }>;
+    const rows = await matchChunks(numericBookId, queryEmbedding, TOP_K);
 
     const chunks: RetrievedChunk[] = rows.map((r) => ({
       ...r,
-      payload: JSON.parse(r.payload),
+      chapter_number: r.chapter_number ?? 0,
+      payload: r.payload as Record<string, unknown>,
     }));
 
     if (chunks.length === 0) {

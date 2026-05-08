@@ -1,6 +1,7 @@
 # Audiobook Brain v1.1
 
-Local-first second brain for the books you've heard or read. Two paths in:
+Second brain for the books you've heard or read. The web app is ready for
+Vercel + Supabase; the older SQLite ingest path remains available locally.
 
 1. **Manual entry** — type a title (or pick from Open Library), set status,
    rating, and a note. Searchable via the note.
@@ -23,10 +24,31 @@ cd ..
 # Node side (web app)
 cd web
 npm install
-cp .env.example .env.local   # ANTHROPIC_API_KEY + VOYAGE_API_KEY
+cp .env.example .env.local   # API keys + Supabase URL/service role key
 npm run dev
 # → http://localhost:3000
 ```
+
+## Supabase setup
+
+Run `web/supabase/migrations/001_book_companion.sql` in the Supabase SQL
+editor for the shared MyPlayground project. Then add `book_companion` to
+Supabase Dashboard → Settings → API → Exposed schemas.
+
+The app expects these Vercel/local env vars:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+VOYAGE_API_KEY=
+LLM_PROVIDER=anthropic
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` must only be set in server environments such as
+Vercel project env vars or local `.env.local`; never expose it in client
+components or commit it.
 
 ## Daily flows
 
@@ -61,9 +83,9 @@ npm run dev
   drives library grouping.
 - `finished_at` is managed by the PATCH route, not the UI.
 
-## Porting to Postgres later
+## Storage notes
 
-The schema avoids SQLite-specific features. The dedupe key is computed in
-application code (TS + Python), so it ports unchanged. The vector index
-(`chunk_vectors`) is the only piece that needs a swap — `vec0` virtual
-table → pgvector column. Roughly an afternoon of work.
+The production web app uses Supabase Postgres with `pgvector` in the
+isolated `book_companion` schema. The Python ingestion script still writes
+to local SQLite; porting it to Supabase is the next step for chapter-level
+hosted ingestion.

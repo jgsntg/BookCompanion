@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, serializeVector } from "@/lib/db";
+import {
+  createBook,
+  getBookByDedupeKey,
+  listLibraryBooks,
+  ReadingStatus,
+  replaceNoteChunk,
+} from "@/lib/db";
 import { makeDedupeKey } from "@/lib/dedupe";
 import { embedDocument } from "@/lib/embeddings";
 
@@ -7,30 +13,10 @@ import { embedDocument } from "@/lib/embeddings";
 // Returns library books, optionally filtered by reading_status.
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get("status");
-  const db = getDb();
-
   const validStatuses = new Set(["want_to_read", "reading", "finished", "abandoned"]);
-  const where = status && validStatuses.has(status) ? "WHERE reading_status = ?" : "";
-  const params = status && validStatuses.has(status) ? [status] : [];
-
-  const rows = db
-    .prepare(`
-      SELECT
-        id, title, author, reading_status, rating, cover_url,
-        is_ingested, finished_at, created_at,
-        (SELECT COUNT(*) FROM chunks WHERE book_id = books.id) AS chunk_count
-      FROM books
-      ${where}
-      ORDER BY
-        CASE reading_status
-          WHEN 'reading' THEN 0
-          WHEN 'want_to_read' THEN 1
-          WHEN 'finished' THEN 2
-          WHEN 'abandoned' THEN 3
-        END,
-        COALESCE(finished_at, updated_at) DESC
-    `)
-    .all(...params);
+  const rows = await listLibraryBooks(
+    status && validStatuses.has(status) ? (status as ReadingStatus) : undefined
+  );
 
   return NextResponse.json({ books: rows });
 }
@@ -56,11 +42,7 @@ export async function POST(req: NextRequest) {
     const dedupeKey = makeDedupeKey(title, author);
     const finishedAt = status === "finished" ? new Date().toISOString() : null;
 
-    const db = getDb();
-
-    const existing = db.prepare("SELECT id FROM books WHERE dedupe_key = ?").get(dedupeKey) as
-      | { id: number }
-      | undefined;
+    const existing = await getBookByDedupeKey(dedupeKey);
 
     if (existing) {
       return NextResponse.json(
@@ -69,34 +51,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const insert = db.prepare(`
-      INSERT INTO books (
-        title, author, dedupe_key, reading_status, rating, note, cover_url, finished_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = insert.run(
-      title.trim(),
-      author.trim(),
-      dedupeKey,
-      status,
-      rating ?? null,
-      note?.trim() || null,
-      cover_url ?? null,
-      finishedAt
-    );
-    const bookId = Number(result.lastInsertRowid);
+    const trimmedNote = note?.trim() || null;
+    const bookId = await createBook({
+      title: title.trim(),
+      author: author.trim(),
+      dedupe_key: dedupeKey,
+      reading_status: status as ReadingStatus,
+      rating: rating ?? null,
+      note: trimmedNote,
+      cover_url: cover_url ?? null,
+      finished_at: finishedAt,
+    });
 
     // If a note was provided, embed it as a chunk so it shows up in retrieval.
-    const trimmedNote = note?.trim();
     if (trimmedNote) {
       const embedding = await embedDocument(trimmedNote);
-      const chunkInsert = db.prepare(`
-        INSERT INTO chunks (book_id, chapter_id, chapter_number, chunk_type, content, payload)
-        VALUES (?, NULL, NULL, 'note', ?, ?)
-      `);
-      const chunkResult = chunkInsert.run(bookId, trimmedNote, JSON.stringify({ note: trimmedNote }));
-      db.prepare("INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)")
-        .run(Number(chunkResult.lastInsertRowid), serializeVector(embedding));
+      await replaceNoteChunk(bookId, trimmedNote, embedding);
     }
 
     return NextResponse.json({ id: bookId }, { status: 201 });

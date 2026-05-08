@@ -1,31 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/db";
+import { getBook, getBookChapters } from "@/lib/db";
 import QueryBox from "@/components/QueryBox";
 import LibraryPanel from "@/components/LibraryPanel";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ id: string }>;
-}
-
-interface BookRow {
-  id: number;
-  title: string;
-  author: string;
-  chapter_count: number;
-  reading_status: "want_to_read" | "reading" | "finished" | "abandoned";
-  rating: number | null;
-  note: string | null;
-  cover_url: string | null;
-  is_ingested: number;
-  book_type: "fiction" | "nonfiction" | null;
-}
-
-interface ChapterRow {
-  chapter_number: number;
-  title: string | null;
-  word_count: number;
-  extraction: string;
 }
 
 interface Extraction {
@@ -42,32 +24,17 @@ interface Extraction {
 
 export default async function BookPage({ params }: PageProps) {
   const { id } = await params;
-  const db = getDb();
+  const bookId = Number(id);
+  if (!Number.isInteger(bookId)) notFound();
 
-  const book = db
-    .prepare(`
-      SELECT id, title, author, chapter_count, reading_status, rating, note,
-             cover_url, is_ingested, book_type
-      FROM books WHERE id = ?
-    `)
-    .get(id) as BookRow | undefined;
-
+  const book = await getBook(bookId);
   if (!book) notFound();
 
-  const chapterRows = book.is_ingested
-    ? (db
-        .prepare(`
-          SELECT chapter_number, title, word_count, extraction
-          FROM chapters
-          WHERE book_id = ?
-          ORDER BY chapter_number
-        `)
-        .all(id) as ChapterRow[])
-    : [];
+  const chapterRows = book.is_ingested ? await getBookChapters(book.id) : [];
 
   const chapters = chapterRows.map((c) => ({
     ...c,
-    extraction: JSON.parse(c.extraction) as Extraction,
+    extraction: c.extraction as Extraction,
   }));
 
   return (
@@ -124,7 +91,7 @@ export default async function BookPage({ params }: PageProps) {
                 <div className="ch-title">
                   Chapter {ch.chapter_number}: {ch.title || "(untitled)"}
                   <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 13, marginLeft: 8 }}>
-                    {ch.word_count.toLocaleString()} words
+                    {(ch.word_count ?? 0).toLocaleString()} words
                   </span>
                 </div>
 

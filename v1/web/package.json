@@ -9,16 +9,14 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "better-sqlite3": "^11.5.0",
+    "@supabase/supabase-js": "^2.105.1",
     "next": "^15.0.0",
     "openai": "^6.37.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sqlite-vec": "^0.1.6",
     "voyageai": "^0.0.4"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "typescript": "^5.6.0"
