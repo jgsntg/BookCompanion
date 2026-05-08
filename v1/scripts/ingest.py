@@ -91,6 +91,25 @@ def chunks_from_extraction(extraction: dict) -> list[tuple[str, str, dict]]:
         if question:
             out.append(("question", question, {"question": question}))
 
+    for event in extraction.get("key_events") or []:
+        text = event.get("event", "")
+        if text:
+            out.append(("event", text, event))
+
+    for character in extraction.get("characters") or []:
+        name = character.get("name", "")
+        desc = character.get("description", "")
+        text = f"{name}: {desc}".strip(": ").strip()
+        if text:
+            out.append(("character", text, character))
+
+    for location in extraction.get("locations") or []:
+        name = location.get("name", "")
+        desc = location.get("description", "")
+        text = f"{name}: {desc}".strip(": ").strip()
+        if text:
+            out.append(("location", text, location))
+
     return out
 
 

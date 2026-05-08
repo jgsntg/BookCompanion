@@ -12,7 +12,7 @@ from pathlib import Path
 from anthropic import Anthropic
 
 MODEL = "claude-sonnet-4-5"
-MAX_TOKENS = 4096
+MAX_TOKENS = 6000
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extract_chapter.md"
 

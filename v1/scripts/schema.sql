@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS chunks (
   chapter_id INTEGER REFERENCES chapters(id) ON DELETE CASCADE,
   chapter_number INTEGER,                -- denormalized; null for non-chapter chunks
   chunk_type TEXT NOT NULL CHECK (chunk_type IN (
-    'summary', 'claim', 'framework', 'passage', 'connection', 'question', 'note'
+    'summary', 'claim', 'framework', 'passage', 'connection', 'question', 'note',
+    'event', 'character', 'location'
   )),
   content TEXT NOT NULL,
   payload TEXT NOT NULL                  -- JSON

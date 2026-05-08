@@ -38,7 +38,7 @@ npm run dev
 
 **Reading a book in the app:**
 1. Run v0 extraction:
-   `python ../audiobook-brain/src/extract.py somebook.epub`
+   `python ../v0/src/extract.py somebook.epub`
 2. Ingest:
    `python scripts/ingest.py ../audiobook-brain/output/some-book.json`
 3. Open the book in the UI. Status is auto-set to "Reading."
