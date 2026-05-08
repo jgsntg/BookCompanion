@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 # Make src/ importable when run as `python src/extract.py ...`
 sys.path.insert(0, str(Path(__file__).parent))
 
+from detect_book_type import detect_book_type
 from epub_parser import parse_epub
 from extractor import extract_chapter, ExtractionError
 
@@ -58,6 +59,12 @@ def main() -> int:
         "--chapters",
         help="Chapter range to (re-)extract, e.g. '1-10' or '1,3,5' or '1-5,8'",
     )
+    parser.add_argument(
+        "--type",
+        choices=["fiction", "nonfiction", "auto"],
+        default="auto",
+        help="Book type for extraction. 'auto' detects from the first chapter (default).",
+    )
     args = parser.parse_args()
 
     epub_path = Path(args.epub)
@@ -83,6 +90,17 @@ def main() -> int:
     print(f"  Author:   {metadata['author']}")
     print(f"  Chapters: {len(chapters)}")
 
+    book_type = args.type
+    if book_type == "auto":
+        print("  Detecting book type... ", end="", flush=True)
+        book_type = detect_book_type(
+            client, metadata["title"], metadata["author"],
+            chapters[0].text if chapters else "",
+        )
+        print(book_type)
+    else:
+        print(f"  Book type:  {book_type}")
+
     if chapter_filter:
         chapters = [ch for ch in chapters if ch.number in chapter_filter]
         print(f"  Extracting: chapters {sorted(chapter_filter)}")
@@ -98,6 +116,7 @@ def main() -> int:
         try:
             extraction = extract_chapter(
                 client,
+                book_type=book_type,
                 title=metadata["title"],
                 author=metadata["author"],
                 chapter_number=ch.number,
@@ -130,6 +149,7 @@ def main() -> int:
     if chapter_filter and out_path.exists():
         # Merge: keep existing chapters, replace only the re-extracted ones.
         existing = json.loads(out_path.read_text())
+        existing["book_type"] = book_type
         by_num = {c["chapter_number"]: i for i, c in enumerate(existing["chapters"])}
         for new_ch in newly_extracted:
             num = new_ch["chapter_number"]
@@ -143,6 +163,7 @@ def main() -> int:
         results = {
             "title": metadata["title"],
             "author": metadata["author"],
+            "book_type": book_type,
             "source_file": epub_path.name,
             "chapter_count": len(newly_extracted),
             "chapters": newly_extracted,

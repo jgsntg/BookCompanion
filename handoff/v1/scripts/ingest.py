@@ -4,16 +4,15 @@ ingest.py — Read v0 extraction JSON, write to SQLite, embed each chunk.
 Usage:
     python scripts/ingest.py path/to/v0/output/some-book.json
 
-Behavior:
-- Computes dedupe_key = normalize(title) + "::" + normalize(author).
-- If a book row with that key already exists (e.g. user manually logged
-  it earlier), this script *upgrades* it in place: keeps reading_status,
-  rating, note, etc., and adds chapters/chunks/ingestion fields.
-  (The user said they don't need this, but the schema gets it for free
-  and avoiding it would mean blocking re-ingest after manual entry,
-  which is a worse UX.)
-- If extracted chapters yield no chunks (rare), the row still upgrades
-  cleanly — the book becomes "ingested" with zero chunks.
+Reads book_type from the v0 JSON top level. Emits chunks based on the
+extraction shape, tolerating both old and new field names:
+- shared (both types):  summary, claim, framework, passage,
+                        connection, question
+- fiction-only:         event, character, location
+
+Note on field name mapping: the v0 prompt uses "key_events" (with
+"characters_involved" sub-array) — we map that to chunk_type='event'
+and preserve characters_involved in the payload so retrieval can use it.
 """
 
 from __future__ import annotations
@@ -61,26 +60,21 @@ def open_db() -> sqlite3.Connection:
 
 
 def chunks_from_extraction(extraction: dict) -> list[tuple[str, str, dict]]:
+    """
+    Flatten one chapter's extraction into (chunk_type, embed_text, payload) tuples.
+
+    Tolerant of multiple shapes:
+    - "key_events" (current v0 prompt) and "events" (earlier name) both map to chunk_type='event'
+    - characters_involved is preserved in the event payload for retrieval
+    """
     out: list[tuple[str, str, dict]] = []
 
+    # Shared
     if summary := extraction.get("summary"):
         out.append(("summary", summary, {"summary": summary}))
 
-    for claim in extraction.get("claims") or []:
-        text = claim.get("claim", "")
-        if text:
-            out.append(("claim", text, claim))
-
-    for fw in extraction.get("frameworks") or []:
-        name = fw.get("name", "")
-        desc = fw.get("description", "")
-        text = f"{name}: {desc}".strip(": ").strip()
-        if text:
-            out.append(("framework", text, fw))
-
     for passage in extraction.get("memorable_passages") or []:
-        quote = passage.get("quote", "")
-        if quote:
+        if quote := passage.get("quote"):
             out.append(("passage", quote, passage))
 
     for connection in extraction.get("connections") or []:
@@ -91,27 +85,47 @@ def chunks_from_extraction(extraction: dict) -> list[tuple[str, str, dict]]:
         if question:
             out.append(("question", question, {"question": question}))
 
-    for event in (extraction.get("key_events") or extraction.get("events") or []):
-        text = event.get("event", "")
-        if text:
-            involved = event.get("characters_involved") or []
-            if involved:
-                text = f"{text} (characters: {', '.join(involved)})"
-            out.append(("event", text, event))
+    for claim in extraction.get("claims") or []:
+        if text := claim.get("claim", ""):
+            out.append(("claim", text, claim))
 
-    for character in extraction.get("characters") or []:
-        name = character.get("name", "")
-        desc = character.get("description", "")
+    for fw in extraction.get("frameworks") or []:
+        name = fw.get("name", "")
+        desc = fw.get("description", "")
         text = f"{name}: {desc}".strip(": ").strip()
         if text:
-            out.append(("character", text, character))
+            out.append(("framework", text, fw))
 
-    for location in extraction.get("locations") or []:
-        name = location.get("name", "")
-        desc = location.get("description", "")
+    # Fiction-only
+    for char in extraction.get("characters") or []:
+        name = char.get("name", "")
+        desc = char.get("description", "")
+        # Embed "Name: description" so retrieval works for both
+        # name lookups and trait lookups.
         text = f"{name}: {desc}".strip(": ").strip()
         if text:
-            out.append(("location", text, location))
+            out.append(("character", text, char))
+
+    # Accept both "key_events" (current prompt) and "events" (legacy / shorter form)
+    events_field = extraction.get("key_events") or extraction.get("events") or []
+    for ev in events_field:
+        # Current shape: {"event": "...", "characters_involved": [...]}
+        # Legacy shape:  {"event": "...", "significance": "..."}
+        text = ev.get("event", "")
+        if not text:
+            continue
+        # If characters are involved, append them to the embedded text so a query like
+        # "what did Marcus do" surfaces the event even if the chunk type is 'event' not 'character'.
+        chars = ev.get("characters_involved") or []
+        embed_text = f"{text} (involves: {', '.join(chars)})" if chars else text
+        out.append(("event", embed_text, ev))
+
+    for loc in extraction.get("locations") or []:
+        name = loc.get("name", "")
+        desc = loc.get("description", "")
+        text = f"{name}: {desc}".strip(": ").strip()
+        if text:
+            out.append(("location", text, loc))
 
     return out
 
@@ -127,9 +141,12 @@ def ingest(json_path: Path) -> None:
     data = json.loads(json_path.read_text())
     title = data["title"]
     author = data["author"]
-    book_type = data.get("book_type")
     source = data["source_file"]
     chapters = data["chapters"]
+    book_type = data.get("book_type")
+    if book_type and book_type not in ("fiction", "nonfiction"):
+        sys.exit(f"Invalid book_type in JSON: {book_type!r}")
+
     dedupe_key = make_dedupe_key(title, author)
 
     load_dotenv()
@@ -141,7 +158,6 @@ def ingest(json_path: Path) -> None:
     conn = open_db()
     cur = conn.cursor()
 
-    # Upsert book on dedupe_key. Preserve user-edited library fields if row exists.
     cur.execute("""
         INSERT INTO books (
             title, author, dedupe_key, source_file, chapter_count,
@@ -153,8 +169,7 @@ def ingest(json_path: Path) -> None:
             chapter_count = excluded.chapter_count,
             is_ingested = 1,
             ingest_status = 'processing',
-            book_type = excluded.book_type,
-            -- bump to 'reading' only if it was 'want_to_read'; preserve other states
+            book_type = COALESCE(excluded.book_type, books.book_type),
             reading_status = CASE
                 WHEN books.reading_status = 'want_to_read' THEN 'reading'
                 ELSE books.reading_status
@@ -164,9 +179,6 @@ def ingest(json_path: Path) -> None:
     """, (title, author, dedupe_key, source, len(chapters), book_type))
     book_id = cur.fetchone()[0]
 
-    # Wipe prior ingestion artifacts (re-ingest is allowed and idempotent).
-    # Note: chunks of type 'note' are user-authored, not from extraction —
-    # preserve them.
     cur.execute("""
         DELETE FROM chunk_vectors WHERE chunk_id IN (
             SELECT id FROM chunks WHERE book_id = ? AND chunk_type != 'note'
@@ -175,7 +187,7 @@ def ingest(json_path: Path) -> None:
     cur.execute("DELETE FROM chunks WHERE book_id = ? AND chunk_type != 'note'", (book_id,))
     cur.execute("DELETE FROM chapters WHERE book_id = ?", (book_id,))
 
-    print(f"Ingesting {title} by {author} ({len(chapters)} chapters)")
+    print(f"Ingesting {title} by {author} ({len(chapters)} chapters, type={book_type or 'unspecified'})")
 
     total_chunks = 0
     for ch in chapters:

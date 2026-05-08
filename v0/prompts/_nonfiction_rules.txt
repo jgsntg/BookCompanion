@@ -1,0 +1,3 @@
+6. **For non-fiction**, focus on claims, frameworks, and connections. Memorable passages are rare.
+7. **Claims must be debatable.** If everyone agrees with the assertion, it's not worth extracting. Descriptions of what happened are not claims.
+8. **Frameworks must be reusable mental models**, not chapter-specific summaries. A framework should apply to situations outside this book.

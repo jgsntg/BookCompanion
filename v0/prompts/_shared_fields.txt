@@ -1,0 +1,32 @@
+  "summary": "2-3 sentences. What this chapter is trying to accomplish or argue. For fiction, describe structural or thematic purpose — not a plot recap.",
+
+  "claims": [
+    {
+      "claim": "A specific, debatable assertion the author makes, paraphrased in their voice. Should be debatable — if everyone would agree, it's not worth extracting. For fiction, this might be a thematic argument the chapter advances.",
+      "evidence": "How the author supports it: study, anecdote, logic, narrative demonstration. One sentence.",
+      "confidence": "stated | implied | speculative"
+    }
+  ],
+
+  "frameworks": [
+    {
+      "name": "Name of the model, framework, or distinction.",
+      "description": "What it is and when it applies. One or two sentences.",
+      "components": ["element 1", "element 2"]
+    }
+  ],
+
+  "memorable_passages": [
+    {
+      "quote": "Verbatim quote, only if genuinely memorable or quotable on its own. Most chapters yield zero of these — that's normal.",
+      "context": "What's happening or being argued when this is said."
+    }
+  ],
+
+  "connections": [
+    "Concepts, fields, or ideas this chapter touches that the reader might want to connect to other books later. Single phrases, not sentences."
+  ],
+
+  "questions_raised": [
+    "Open questions the chapter implies but doesn't fully answer. One question per array entry."
+  ]

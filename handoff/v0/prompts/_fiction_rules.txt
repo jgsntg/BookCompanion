@@ -1,0 +1,4 @@
+7. **For fiction**, `claims` are usually thematic arguments the chapter advances rather than plot points; `frameworks` are rare; `memorable_passages` are more common.
+8. **`key_events` are required.** Capture the 2-5 most plot-significant events per chapter — turning points, decisions, arrivals, deaths, reveals. Skip minor background action. If nothing significant happens, return `[]`.
+9. **`characters`**: list every named character who speaks, acts, or is meaningfully described in this chapter. Set `first_appearance: true` only if this is the first time they appear in the book. Be brief — one or two sentences per character. Do not list characters who are merely mentioned in passing.
+10. **`locations`**: list named places that appear or are referenced in ways that matter to the plot (where characters are, where they're going, where something happened). Skip vague or incidental references.

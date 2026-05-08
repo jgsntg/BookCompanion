@@ -1,0 +1,4 @@
+6. **For fiction**, claims become thematic arguments; frameworks are rare; memorable passages are more common; connections still apply (themes, motifs, ideas the work engages with).
+7. **`key_events`, `characters`, and `locations` are required fields for fiction.** Capture the 2-5 most plot-significant events per chapter — turning points, decisions, arrivals, deaths, reveals. Skip minor background action. If nothing significant happens, return `[]`.
+8. **`characters`**: list every named character who speaks, acts, or is meaningfully described in this chapter. Set `first_appearance: true` only if this is the first time they appear in the book. Be brief — one or two sentences per character. Do not list characters who are merely mentioned in passing.
+9. **`locations`**: list named places that appear or are referenced in ways that matter to the plot (where characters are, where they're going, where something happened). Skip vague or incidental references.

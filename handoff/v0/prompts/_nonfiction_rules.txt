@@ -1,0 +1,3 @@
+7. **For non-fiction**, focus on `claims`, `frameworks`, and `connections`. `memorable_passages` are rare in non-fiction; don't reach for them.
+8. **A claim must be debatable.** "The sky is blue" is not a claim. "Most strategy fails because executives confuse activity with progress" is a claim.
+9. **A framework must be reusable.** A passing analogy isn't a framework; a named model the author returns to is.
