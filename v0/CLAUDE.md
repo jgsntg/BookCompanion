@@ -32,8 +32,10 @@ Currently at v0: standalone Python extraction script. No DB, no UI yet.
 - Python 3.11+
 - `ebooklib` for EPUB parsing
 - `beautifulsoup4` for HTML cleanup inside chapters
-- `anthropic` SDK, model = `claude-sonnet-4-5` (Sonnet 4.6 is overkill-cost
-  for extraction; we can revisit if quality plateaus)
+- **Multi-provider LLM** via `src/llm_client.py` — set `LLM_PROVIDER=anthropic|openai` in `.env` or pass `--provider` flag
+  - Anthropic: `claude-sonnet-4-5` (extraction), `claude-haiku-4-5-20251001` (detection)
+  - OpenAI: `gpt-4o` (extraction), `gpt-4o-mini` (detection)
+  - Default is `anthropic`
 - Plain JSON output to `output/`
 
 ## What not to do
@@ -62,8 +64,11 @@ Resist the urge to rewrite the whole prompt. Small edits, fast cycles.
 
 ## File map
 
-- `src/extract.py` — entrypoint, orchestrates parse → extract → write
+- `src/extract.py` — entrypoint, orchestrates parse → extract → write; `--provider` flag
 - `src/epub_parser.py` — EPUB → list of (chapter_number, title, text)
-- `src/extractor.py` — calls Claude with the prompt, returns structured JSON
+- `src/llm_client.py` — provider abstraction (Anthropic / OpenAI), `LLMClient.from_env()`
+- `src/extractor.py` — calls LLM with the prompt, returns structured JSON
+- `src/detect_book_type.py` — quick LLM call to classify fiction vs nonfiction
 - `prompts/extract_chapter.md` — the extraction prompt itself
 - `output/` — JSON results, gitignored
+- `.env` — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `LLM_PROVIDER` (gitignored)

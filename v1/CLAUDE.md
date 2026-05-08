@@ -106,7 +106,13 @@ audiobook-brain-v1/
 
 ## Models / cost
 
-- Extraction (v0): `claude-sonnet-4-5`
-- Synthesis (web): `claude-sonnet-4-5`
-- Embeddings: `voyage-3-lite`, 512 dims
-- Manual note embed: ~$0.00001 per note. Negligible.
+Provider is selected by `LLM_PROVIDER=anthropic|openai` in `.env.local` (default: `anthropic`).
+
+| Role | Anthropic | OpenAI |
+|---|---|---|
+| Extraction (v0) | `claude-sonnet-4-5` | `gpt-4o` |
+| Synthesis (web) | `claude-sonnet-4-5` | `gpt-4o` |
+| Detection (v0) | `claude-haiku-4-5-20251001` | `gpt-4o-mini` |
+| Embeddings | `voyage-3-lite` 512d | `voyage-3-lite` 512d |
+
+Embeddings always use Voyage (provider-independent). Manual note embed: ~$0.00001. Negligible.

@@ -1,5 +1,5 @@
 """
-Calls Claude with the chapter extraction prompt and returns parsed JSON.
+Calls the configured LLM with the chapter extraction prompt and returns parsed JSON.
 
 The prompt is composed from base + type-specific fragments in prompts/.
 Kept deliberately thin — the prompts are the product, not this code.
@@ -10,9 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from anthropic import Anthropic
+from llm_client import LLMClient
 
-MODEL = "claude-sonnet-4-5"
 MAX_TOKENS = 6000
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
@@ -55,7 +54,7 @@ def build_prompt(
 
 
 def extract_chapter(
-    client: Anthropic,
+    client: LLMClient,
     *,
     book_type: str,
     title: str,
@@ -74,14 +73,13 @@ def extract_chapter(
         chapter_text=chapter_text,
     )
 
-    response = client.messages.create(
-        model=MODEL,
+    raw = client.complete(
+        model=client.extraction_model,
         max_tokens=MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
-    )
+    ).strip()
 
-    raw = response.content[0].text.strip()
-    # Sonnet usually returns clean JSON; strip fences defensively.
+    # Strip markdown fences defensively.
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1]
         if raw.endswith("```"):

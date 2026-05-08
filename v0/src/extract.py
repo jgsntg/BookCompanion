@@ -15,13 +15,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import time
 from pathlib import Path
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
 
 # Make src/ importable when run as `python src/extract.py ...`
@@ -30,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from detect_book_type import detect_book_type
 from epub_parser import parse_epub
 from extractor import extract_chapter, ExtractionError
+from llm_client import LLMClient
 
 
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
@@ -65,6 +64,12 @@ def main() -> int:
         default="auto",
         help="Book type for extraction. 'auto' detects from the first chapter (default).",
     )
+    parser.add_argument(
+        "--provider",
+        choices=["anthropic", "openai"],
+        default=None,
+        help="LLM provider to use. Overrides LLM_PROVIDER env var (default: anthropic).",
+    )
     args = parser.parse_args()
 
     epub_path = Path(args.epub)
@@ -77,12 +82,12 @@ def main() -> int:
         chapter_filter = parse_chapter_range(args.chapters)
 
     load_dotenv()
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("ANTHROPIC_API_KEY not set (check .env)", file=sys.stderr)
+    try:
+        client = LLMClient.from_env(provider=args.provider)
+    except (RuntimeError, ValueError) as e:
+        print(str(e), file=sys.stderr)
         return 1
-
-    client = Anthropic(api_key=api_key)
+    print(f"  Provider: {client.provider} ({client.extraction_model})")
 
     print(f"Parsing {epub_path.name}...")
     metadata, chapters = parse_epub(epub_path)

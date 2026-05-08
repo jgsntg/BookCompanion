@@ -1,15 +1,14 @@
 """
 Detect whether a book is fiction or nonfiction.
 
-Uses a fast Claude call on the title, author, and a text sample.
+Uses a fast LLM call on the title, author, and a text sample.
 Falls back to 'nonfiction' on any error (safer default for extraction quality).
 """
 
 from __future__ import annotations
 
-from anthropic import Anthropic
+from llm_client import LLMClient
 
-MODEL = "claude-haiku-4-5-20251001"
 SAMPLE_WORDS = 300
 
 _PROMPT = """\
@@ -26,7 +25,7 @@ Opening text:
 Respond with exactly one word: fiction or nonfiction. Nothing else."""
 
 
-def detect_book_type(client: Anthropic, title: str, author: str, sample_text: str) -> str:
+def detect_book_type(client: LLMClient, title: str, author: str, sample_text: str) -> str:
     """Return 'fiction' or 'nonfiction'. Falls back to 'nonfiction' on any error."""
     sample = " ".join(sample_text.split()[:SAMPLE_WORDS])
     prompt = (
@@ -36,12 +35,12 @@ def detect_book_type(client: Anthropic, title: str, author: str, sample_text: st
         .replace("{sample}", sample)
     )
     try:
-        response = client.messages.create(
-            model=MODEL,
+        result = client.complete(
+            model=client.detection_model,
             max_tokens=10,
             messages=[{"role": "user", "content": prompt}],
-        )
-        result = response.content[0].text.strip().lower()
+        ).strip().lower()
+
         if result in ("fiction", "nonfiction"):
             return result
         if "nonfiction" in result or "non-fiction" in result:

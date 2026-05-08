@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 export interface RetrievedChunk {
   chunk_type: string;
@@ -11,7 +12,8 @@ export interface RetrievedChunk {
   distance: number;
 }
 
-const MODEL = "claude-sonnet-4-5";
+const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+const OPENAI_MODEL = "gpt-4o";
 
 const NONFICTION_SYSTEM_PROMPT = `You are answering questions about a book on behalf of someone who is reading or has read it.
 You will be given a question and a set of retrieved chunks from the reader's notes (claims, frameworks, memorable passages, connections, and questions raised by the text).
@@ -53,9 +55,7 @@ export async function synthesize(
   chunks: RetrievedChunk[],
   bookContext?: { title: string; author: string; bookType?: string | null }
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client = new Anthropic({ apiKey });
+  const provider = process.env.LLM_PROVIDER ?? "anthropic";
 
   const systemPrompt =
     bookContext?.bookType === "fiction"
@@ -81,8 +81,30 @@ Retrieved chunks (most relevant first):
 
 ${chunkText}`;
 
+  if (provider === "openai") {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OPENAI_API_KEY not set");
+    const client = new OpenAI({ apiKey });
+
+    const response = await client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_tokens: 1024,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+    });
+
+    return response.choices[0].message.content ?? "";
+  }
+
+  // Default: Anthropic
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const client = new Anthropic({ apiKey });
+
   const response = await client.messages.create({
-    model: MODEL,
+    model: ANTHROPIC_MODEL,
     max_tokens: 1024,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
