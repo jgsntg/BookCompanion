@@ -1,0 +1,241 @@
+:root {
+  --bg: #fafaf7;
+  --fg: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: #e5e5e0;
+  --accent: #b8580c;
+  --card: #ffffff;
+  --code-bg: #f4f3ee;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Charter", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 32px 0 12px; }
+h3 { font-size: 13px; margin: 32px 0 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.subtitle { color: var(--muted); margin: 0 0 32px; }
+
+.add-link {
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+}
+
+.book-list { list-style: none; padding: 0; margin: 0; }
+
+.book-card {
+  display: block;
+  padding: 16px 20px;
+  margin-bottom: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--fg);
+}
+.book-card:hover { border-color: var(--accent); text-decoration: none; }
+.book-card.with-cover {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.book-card .title { font-weight: 600; margin-bottom: 2px; }
+.book-card .meta { font-size: 14px; color: var(--muted); }
+
+.cover {
+  width: 48px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--code-bg);
+  flex-shrink: 0;
+}
+.cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Library status panel on the book detail page */
+.status-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+.status-panel .field { display: flex; flex-direction: column; gap: 4px; }
+.status-panel label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.status-panel select, .status-panel textarea {
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.status-panel textarea { min-height: 80px; resize: vertical; grid-column: 1 / -1; }
+.status-panel .stars { display: flex; gap: 4px; align-items: center; }
+.status-panel .stars button {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--border);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.status-panel .stars button.filled { color: var(--accent); }
+.status-panel .stars .clear { font-size: 12px; color: var(--muted); margin-left: 8px; }
+.status-panel .save-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-panel .save-row .indicator { font-size: 13px; color: var(--muted); }
+
+.button {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--fg);
+  color: var(--bg);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.button.danger { background: #b00020; }
+.button:disabled { opacity: 0.5; cursor: not-allowed; }
+.button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+
+/* Query box */
+.query-form { margin: 24px 0; }
+.query-form textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  resize: vertical;
+}
+.query-form textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.query-form button {
+  margin-top: 12px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  background: var(--fg);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.query-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.answer {
+  margin: 24px 0;
+  padding: 20px 24px;
+  background: var(--card);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  white-space: pre-wrap;
+}
+
+.chunks { margin-top: 24px; }
+.chunk {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: var(--code-bg);
+  border-radius: 4px;
+  font-size: 14px;
+}
+.chunk .chunk-meta {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.chunk .chunk-content { color: var(--fg); }
+
+.chapter-extraction {
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.chapter-extraction .ch-title { font-weight: 600; margin-bottom: 8px; }
+.chapter-extraction details { margin-top: 8px; }
+.chapter-extraction summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+
+/* Add-book page */
+.add-form { display: flex; flex-direction: column; gap: 16px; }
+.add-form input, .add-form textarea, .add-form select {
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  width: 100%;
+}
+.add-form label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+.add-form textarea { min-height: 100px; resize: vertical; }
+.lookup-results {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.lookup-results li {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.lookup-results li:last-child { border-bottom: none; }
+.lookup-results li:hover { background: var(--bg); }
+.lookup-results .small-cover { width: 30px; height: 45px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+
+.empty { color: var(--muted); font-style: italic; }
+.error { color: #b00020; padding: 12px 16px; background: #fff0f0; border-radius: 4px; margin: 16px 0; }

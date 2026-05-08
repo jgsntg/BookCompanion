@@ -1,0 +1,12 @@
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.local
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+.next/
+.DS_Store
