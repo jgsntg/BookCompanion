@@ -33,6 +33,37 @@ from llm_client import LLMClient
 
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
+# ── Model catalog ────────────────────────────────────────────────────────────
+
+PROVIDERS: list[tuple[str, str]] = [
+    ("anthropic", "Claude models — strong instruction-following, selective extraction"),
+    ("openai",    "GPT models — solid alternative, same prompt format"),
+]
+
+EXTRACTION_MODELS: dict[str, list[tuple[str, str]]] = {
+    "anthropic": [
+        ("claude-sonnet-4-6", "best quality/cost ratio  [recommended]"),
+        ("claude-sonnet-4-5", "previous Sonnet generation"),
+    ],
+    "openai": [
+        ("gpt-4o",      "proven quality/cost balance  [recommended]"),
+        ("gpt-4.1",     "newest GPT, stronger instruction-following"),
+        ("gpt-4o-mini", "fast/cheap — not recommended for extraction quality"),
+    ],
+}
+
+
+def _prompt_choice(header: str, choices: list[tuple[str, str]]) -> str:
+    """Print a numbered menu and return the chosen value."""
+    print(header)
+    for i, (value, desc) in enumerate(choices, 1):
+        print(f"  {i}. {value:<40} {desc}")
+    while True:
+        raw = input(f"Enter choice (1–{len(choices)}): ").strip()
+        if raw.isdigit() and 1 <= int(raw) <= len(choices):
+            return choices[int(raw) - 1][0]
+        print(f"  Please enter a number between 1 and {len(choices)}.")
+
 
 def slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text.lower())
@@ -68,7 +99,12 @@ def main() -> int:
         "--provider",
         choices=["anthropic", "openai"],
         default=None,
-        help="LLM provider to use. Overrides LLM_PROVIDER env var (default: anthropic).",
+        help="LLM provider (anthropic | openai). Prompted if omitted.",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Extraction model name. Prompted if omitted.",
     )
     args = parser.parse_args()
 
@@ -82,12 +118,28 @@ def main() -> int:
         chapter_filter = parse_chapter_range(args.chapters)
 
     load_dotenv()
+
+    # ── Interactive provider / model selection ────────────────────────────────
+    provider = args.provider
+    if not provider:
+        print()
+        provider = _prompt_choice("Select provider:", PROVIDERS)
+
+    model = args.model
+    if not model:
+        print()
+        model = _prompt_choice(
+            f"Select extraction model for {provider}:",
+            EXTRACTION_MODELS[provider],
+        )
+
+    print()
     try:
-        client = LLMClient.from_env(provider=args.provider)
+        client = LLMClient.from_env(provider=provider, model=model)
     except (RuntimeError, ValueError) as e:
         print(str(e), file=sys.stderr)
         return 1
-    print(f"  Provider: {client.provider} ({client.extraction_model})")
+    print(f"  Provider: {client.provider}  |  Model: {client.extraction_model}")
 
     print(f"Parsing {epub_path.name}...")
     metadata, chapters = parse_epub(epub_path)
