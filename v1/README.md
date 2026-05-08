@@ -66,6 +66,26 @@ components or commit it.
 3. Open the book in the UI. Status is auto-set to "Reading."
 4. Ask questions. Mark as Finished when done.
 
+## Supabase ingestion
+
+For the first production migration, the Supabase ingestion script defaults
+to exactly one extracted book: `v0/output/kings-of-the-wyld.json`.
+
+```bash
+cd v1
+source scripts/.venv/bin/activate
+python scripts/ingest_supabase.py
+```
+
+Leave `v0/output/the-blade-itself.json` for the production smoke test. When
+you are ready to migrate it too:
+
+```bash
+cd v1
+source scripts/.venv/bin/activate
+python scripts/ingest_supabase.py ../v0/output/the-blade-itself.json
+```
+
 ## What's queryable
 
 - Ingested books: full chunk-level retrieval over claims, frameworks,
@@ -86,6 +106,6 @@ components or commit it.
 ## Storage notes
 
 The production web app uses Supabase Postgres with `pgvector` in the
-isolated `book_companion` schema. The Python ingestion script still writes
-to local SQLite; porting it to Supabase is the next step for chapter-level
-hosted ingestion.
+isolated `book_companion` schema. The original `scripts/ingest.py` still
+writes to local SQLite; use `scripts/ingest_supabase.py` for hosted
+chapter-level ingestion.

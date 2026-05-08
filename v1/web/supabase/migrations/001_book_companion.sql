@@ -75,6 +75,11 @@ create index if not exists chunk_vectors_embedding_idx
   using ivfflat (embedding vector_cosine_ops)
   with (lists = 100);
 
+alter table book_companion.books enable row level security;
+alter table book_companion.chapters enable row level security;
+alter table book_companion.chunks enable row level security;
+alter table book_companion.chunk_vectors enable row level security;
+
 create or replace function book_companion.match_chunks(
   query_embedding vector(512),
   target_book_id integer,
