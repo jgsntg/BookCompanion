@@ -1,4 +1,4 @@
-# CLAUDE.md
+o# CLAUDE.md
 
 Standing context for Claude Code working on this project.
 
