@@ -245,6 +245,25 @@ export async function matchChunks(
   return data ?? [];
 }
 
+export async function textSearchChunks(
+  bookId: number,
+  searchQuery: string,
+  matchCount: number
+): Promise<MatchedChunkRow[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("text_search_chunks", {
+    target_book_id: bookId,
+    search_query: searchQuery,
+    match_count: matchCount,
+  });
+
+  if (error) throw error;
+  return (data ?? []).map((r: MatchedChunkRow) => ({
+    ...r,
+    chapter_number: r.chapter_number ?? 0,
+  }));
+}
+
 function compareLibraryBooks(a: LibraryBookRow, b: LibraryBookRow): number {
   const statusOrder: Record<ReadingStatus, number> = {
     reading: 0,

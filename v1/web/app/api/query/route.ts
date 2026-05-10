@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBook, matchChunks } from "@/lib/db";
+import { getBook, matchChunks, textSearchChunks } from "@/lib/db";
 import { embedQuery } from "@/lib/embeddings";
 import { synthesize, RetrievedChunk } from "@/lib/synthesize";
 
-const TOP_K = 8;
+const SEMANTIC_K = 10;
+const TEXT_K = 5;
+const FINAL_K = 8;
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,13 +31,37 @@ export async function POST(req: NextRequest) {
     // Embed the question with input_type="query" (matters for retrieval quality)
     const queryEmbedding = await embedQuery(question);
 
-    const rows = await matchChunks(numericBookId, queryEmbedding, TOP_K);
+    const [semanticRows, textRows] = await Promise.all([
+      matchChunks(numericBookId, queryEmbedding, SEMANTIC_K),
+      textSearchChunks(numericBookId, question, TEXT_K),
+    ]);
 
-    const chunks: RetrievedChunk[] = rows.map((r) => ({
-      ...r,
-      chapter_number: r.chapter_number ?? 0,
-      payload: r.payload as Record<string, unknown>,
-    }));
+    // Merge: score = semantic_rank + text_rank (lower = better; absent = ABSENT penalty)
+    const ABSENT = 20;
+    const seen = new Map<string, { row: typeof semanticRows[0]; semRank: number; txtRank: number }>();
+
+    semanticRows.forEach((r, i) => {
+      const key = `${r.chapter_number}::${r.content}`;
+      seen.set(key, { row: r, semRank: i, txtRank: ABSENT });
+    });
+
+    textRows.forEach((r, i) => {
+      const key = `${r.chapter_number}::${r.content}`;
+      if (seen.has(key)) {
+        seen.get(key)!.txtRank = i;
+      } else {
+        seen.set(key, { row: r, semRank: ABSENT, txtRank: i });
+      }
+    });
+
+    const chunks: RetrievedChunk[] = [...seen.values()]
+      .sort((a, b) => (a.semRank + a.txtRank) - (b.semRank + b.txtRank))
+      .slice(0, FINAL_K)
+      .map(({ row }) => ({
+        ...row,
+        chapter_number: row.chapter_number ?? 0,
+        payload: row.payload as Record<string, unknown>,
+      }));
 
     if (chunks.length === 0) {
       return NextResponse.json({

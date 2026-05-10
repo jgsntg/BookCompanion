@@ -12,7 +12,7 @@ export interface RetrievedChunk {
   distance: number;
 }
 
-const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const OPENAI_MODEL = "gpt-4o";
 
 const NONFICTION_SYSTEM_PROMPT = `You are answering questions about a book on behalf of someone who is reading or has read it.
@@ -88,7 +88,7 @@ ${chunkText}`;
 
     const response = await client.chat.completions.create({
       model: OPENAI_MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
