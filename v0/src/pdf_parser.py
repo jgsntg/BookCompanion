@@ -43,9 +43,12 @@ def parse_pdf(pdf_path: Path) -> tuple[dict, list[Chapter]]:
     doc = fitz.open(str(pdf_path))
 
     meta = doc.metadata
+    title = (meta.get("title") or "").strip() or pdf_path.stem
+    author = (meta.get("author") or "").strip() or "Unknown"
+    title, author = _repair_title_author_from_parenthetical(title, author)
     metadata = {
-        "title": (meta.get("title") or "").strip() or pdf_path.stem,
-        "author": (meta.get("author") or "").strip() or "Unknown",
+        "title": title,
+        "author": author,
     }
 
     pages = [page.get_text() for page in doc]
@@ -102,6 +105,28 @@ def _first_line(page_text: str) -> str | None:
         if stripped:
             return stripped[:120]
     return None
+
+
+def _repair_title_author_from_parenthetical(title: str, author: str) -> tuple[str, str]:
+    if author != "Unknown":
+        return title, author
+
+    match = re.search(r"\s+\(([^()]+)\)\s*$", title)
+    if not match:
+        return title, author
+
+    candidate = match.group(1).strip()
+    if not _looks_like_author_list(candidate):
+        return title, author
+
+    return title[: match.start()].strip(), candidate
+
+
+def _looks_like_author_list(value: str) -> bool:
+    if any(ch.isdigit() for ch in value):
+        return False
+    words = re.findall(r"[A-Za-z][A-Za-z'.-]*", value)
+    return "," in value or len(words) >= 2
 
 
 def _clean(text: str) -> str:

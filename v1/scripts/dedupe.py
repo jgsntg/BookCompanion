@@ -19,7 +19,9 @@ def _normalize_author(raw: str) -> str:
     s = raw.strip()
     if "," in s and s.count(",") == 1:
         last, first = (p.strip() for p in s.split(","))
-        if last and first:
+        # Treat "Last, First" as a single inverted author, but avoid
+        # rewriting comma-separated coauthors like "Marily Nika, Diego Granados".
+        if last and first and not (len(last.split()) > 1 and len(first.split()) > 1):
             s = f"{first} {last}"
     return _normalize(s)
 

@@ -16,7 +16,11 @@ function normalizeAuthor(raw: string): string {
   // "Last, First" → "First Last"
   if (s.includes(",") && s.split(",").length === 2) {
     const [last, first] = s.split(",").map((p) => p.trim());
-    if (last && first) s = `${first} ${last}`;
+    // Avoid rewriting comma-separated coauthors like
+    // "Marily Nika, Diego Granados".
+    if (last && first && !(last.split(/\s+/).length > 1 && first.split(/\s+/).length > 1)) {
+      s = `${first} ${last}`;
+    }
   }
   return normalize(s);
 }
