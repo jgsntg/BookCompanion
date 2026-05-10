@@ -1,7 +1,8 @@
 """
 Entrypoint: python src/extract.py path/to/book.epub [--chapters 1-10]
+            python src/extract.py path/to/book.pdf  [--chapters 1-10]
 
-Parses the EPUB, runs Claude extraction on each chapter, writes one
+Parses the EPUB or PDF, runs Claude extraction on each chapter, writes one
 JSON file to output/ with the full result.
 
 --chapters accepts a range (1-10), a list (1,3,5), or both (1-5,8).
@@ -27,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from detect_book_type import detect_book_type
 from epub_parser import parse_epub
+from pdf_parser import parse_pdf
 from extractor import extract_chapter, ExtractionError
 from llm_client import LLMClient
 
@@ -83,8 +85,8 @@ def parse_chapter_range(s: str) -> set[int]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Extract chapters from an EPUB.")
-    parser.add_argument("epub", help="Path to the EPUB file")
+    parser = argparse.ArgumentParser(description="Extract chapters from an EPUB or PDF.")
+    parser.add_argument("source", help="Path to the EPUB or PDF file")
     parser.add_argument(
         "--chapters",
         help="Chapter range to (re-)extract, e.g. '1-10' or '1,3,5' or '1-5,8'",
@@ -108,9 +110,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    epub_path = Path(args.epub)
-    if not epub_path.exists():
-        print(f"File not found: {epub_path}", file=sys.stderr)
+    source_path = Path(args.source)
+    if not source_path.exists():
+        print(f"File not found: {source_path}", file=sys.stderr)
+        return 1
+
+    suffix = source_path.suffix.lower()
+    if suffix not in {".epub", ".pdf"}:
+        print(f"Unsupported file type '{suffix}'. Expected .epub or .pdf.", file=sys.stderr)
         return 1
 
     chapter_filter: set[int] | None = None
@@ -141,8 +148,11 @@ def main() -> int:
         return 1
     print(f"  Provider: {client.provider}  |  Model: {client.extraction_model}")
 
-    print(f"Parsing {epub_path.name}...")
-    metadata, chapters = parse_epub(epub_path)
+    print(f"Parsing {source_path.name}...")
+    if suffix == ".pdf":
+        metadata, chapters = parse_pdf(source_path)
+    else:
+        metadata, chapters = parse_epub(source_path)
     print(f"  Title:    {metadata['title']}")
     print(f"  Author:   {metadata['author']}")
     print(f"  Chapters: {len(chapters)}")
@@ -221,7 +231,7 @@ def main() -> int:
             "title": metadata["title"],
             "author": metadata["author"],
             "book_type": book_type,
-            "source_file": epub_path.name,
+            "source_file": source_path.name,
             "chapter_count": len(newly_extracted),
             "chapters": newly_extracted,
         }
