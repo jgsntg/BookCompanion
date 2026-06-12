@@ -5,7 +5,7 @@ export default function AddBookPage() {
   return (
     <main className="container">
       <p style={{ margin: 0 }}>
-        <Link href="/">← Library</Link>
+        <Link href="/library">← My Library</Link>
       </p>
       <h1>Add a book</h1>
       <p className="subtitle">

@@ -40,13 +40,13 @@ export default async function BookPage({ params }: PageProps) {
   return (
     <main className="container">
       <p style={{ margin: 0 }}>
-        <Link href="/">← Library</Link>
+        <Link href="/library">← My Library</Link>
       </p>
 
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 16 }}>
         {book.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={book.cover_url} alt="" style={{ width: 80, height: 120, objectFit: "cover", borderRadius: 4 }} />
+          <img src={book.cover_url} alt="" className="detail-cover" />
         )}
         <div>
           <h1>{book.title}</h1>
@@ -54,6 +54,7 @@ export default async function BookPage({ params }: PageProps) {
             {book.author}
             {book.is_ingested ? ` · ${book.chapter_count} chapters · queryable` : " · manual entry"}
           </p>
+          {book.blurb && <p className="blurb">{book.blurb}</p>}
         </div>
       </div>
 
@@ -64,6 +65,8 @@ export default async function BookPage({ params }: PageProps) {
           reading_status: book.reading_status,
           rating: book.rating,
           note: book.note,
+          category: book.category,
+          finished_at: book.finished_at,
         }}
       />
 

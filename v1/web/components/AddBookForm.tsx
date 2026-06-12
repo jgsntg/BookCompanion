@@ -10,6 +10,7 @@ interface LookupResult {
   author: string;
   cover_url: string | null;
   year: number | null;
+  ol_key: string | null;
 }
 
 export default function AddBookForm() {
@@ -27,6 +28,8 @@ export default function AddBookForm() {
   const [status, setStatus] = useState<Status>("finished");
   const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState("");
+  const [category, setCategory] = useState("");
+  const [blurb, setBlurb] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +62,17 @@ export default function AddBookForm() {
     setCoverUrl(r.cover_url);
     setSearch("");
     setResults([]);
+
+    // Fetch the work's description/subjects to suggest a category + blurb.
+    if (r.ol_key) {
+      fetch(`/api/lookup/details?key=${encodeURIComponent(r.ol_key)}`)
+        .then((res) => res.json())
+        .then((data: { description: string | null; category: string | null }) => {
+          if (data.category) setCategory(data.category);
+          if (data.description) setBlurb(data.description);
+        })
+        .catch(() => {});
+    }
   }
 
   async function submit() {
@@ -79,6 +93,8 @@ export default function AddBookForm() {
           rating,
           note: note.trim() || null,
           cover_url: coverUrl,
+          category: category.trim() || null,
+          blurb: blurb.trim() || null,
         }),
       });
       const data = await res.json();
@@ -173,6 +189,24 @@ export default function AddBookForm() {
       </div>
 
       <div>
+        <label>Category (optional)</label>
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="e.g. Science fiction — suggested from Open Library when available"
+        />
+      </div>
+
+      <div>
+        <label>Blurb (optional)</label>
+        <textarea
+          value={blurb}
+          onChange={(e) => setBlurb(e.target.value)}
+          placeholder="Filled in from Open Library when available. Edit or clear as you like."
+        />
+      </div>
+
+      <div>
         <label>Note · what I took from it (optional)</label>
         <textarea
           value={note}
@@ -200,7 +234,7 @@ export default function AddBookForm() {
         <button className="button" onClick={submit} disabled={submitting}>
           {submitting ? "Saving…" : "Add to library"}
         </button>
-        <button className="button ghost" onClick={() => router.push("/")} disabled={submitting}>
+        <button className="button ghost" onClick={() => router.push("/library")} disabled={submitting}>
           Cancel
         </button>
       </div>

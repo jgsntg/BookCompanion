@@ -18,6 +18,8 @@ export interface BookRow {
   rating: number | null;
   note: string | null;
   cover_url: string | null;
+  category: string | null;
+  blurb: string | null;
   finished_at: string | null;
   is_ingested: boolean;
   current_chapter: number;
@@ -53,6 +55,7 @@ export interface LibraryBookRow {
   reading_status: ReadingStatus;
   rating: number | null;
   cover_url: string | null;
+  category: string | null;
   is_ingested: boolean;
   finished_at: string | null;
   created_at: string;
@@ -101,6 +104,7 @@ export async function listLibraryBooks(status?: ReadingStatus): Promise<LibraryB
       reading_status,
       rating,
       cover_url,
+      category,
       is_ingested,
       finished_at,
       created_at,
@@ -123,6 +127,7 @@ export async function listLibraryBooks(status?: ReadingStatus): Promise<LibraryB
       reading_status: book.reading_status,
       rating: book.rating,
       cover_url: book.cover_url,
+      category: book.category,
       is_ingested: book.is_ingested,
       finished_at: book.finished_at,
       created_at: book.created_at,
@@ -171,6 +176,8 @@ export async function createBook(input: {
   rating: number | null;
   note: string | null;
   cover_url: string | null;
+  category: string | null;
+  blurb: string | null;
   finished_at: string | null;
 }): Promise<number> {
   const supabase = getSupabase();

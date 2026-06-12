@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, author, reading_status, rating, note, cover_url } = body;
+    const { title, author, reading_status, rating, note, cover_url, category, blurb } = body;
 
     if (!title || !author) {
       return NextResponse.json({ error: "title and author are required" }, { status: 400 });
@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
       rating: rating ?? null,
       note: trimmedNote,
       cover_url: cover_url ?? null,
+      category: typeof category === "string" ? category.trim() || null : null,
+      blurb: typeof blurb === "string" ? blurb.trim() || null : null,
       finished_at: finishedAt,
     });
 

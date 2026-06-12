@@ -11,7 +11,13 @@ interface Props {
     reading_status: Status;
     rating: number | null;
     note: string | null;
+    category: string | null;
+    finished_at: string | null;
   };
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function LibraryPanel({ bookId, initial }: Props) {
@@ -19,14 +25,26 @@ export default function LibraryPanel({ bookId, initial }: Props) {
   const [status, setStatus] = useState<Status>(initial.reading_status);
   const [rating, setRating] = useState<number | null>(initial.rating);
   const [note, setNote] = useState<string>(initial.note ?? "");
+  const [category, setCategory] = useState<string>(initial.category ?? "");
+  const [finishedDate, setFinishedDate] = useState<string>(initial.finished_at?.slice(0, 10) ?? "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [, startTransition] = useTransition();
 
+  function onStatusChange(next: Status) {
+    setStatus(next);
+    if (next === "finished" && !finishedDate) {
+      setFinishedDate(todayStr());
+    }
+  }
+
+  const initialFinishedDate = initial.finished_at?.slice(0, 10) ?? "";
   const dirty =
     status !== initial.reading_status ||
     rating !== initial.rating ||
-    (note || null) !== (initial.note ?? null);
+    (note || null) !== (initial.note ?? null) ||
+    (category || null) !== (initial.category ?? null) ||
+    (status === "finished" ? finishedDate : "") !== initialFinishedDate;
 
   async function save() {
     setSaving(true);
@@ -38,6 +56,8 @@ export default function LibraryPanel({ bookId, initial }: Props) {
           reading_status: status,
           rating,
           note: note.trim() ? note : null,
+          category: category.trim() || null,
+          finished_at: status === "finished" ? finishedDate || todayStr() : null,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Save failed");
@@ -55,13 +75,34 @@ export default function LibraryPanel({ bookId, initial }: Props) {
     <div className="status-panel">
       <div className="field">
         <label>Status</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
+        <select value={status} onChange={(e) => onStatusChange(e.target.value as Status)}>
           <option value="want_to_read">Want to read</option>
           <option value="reading">Reading</option>
           <option value="finished">Finished</option>
           <option value="abandoned">Abandoned</option>
         </select>
       </div>
+
+      <div className="field">
+        <label>Category</label>
+        <input
+          type="text"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="e.g. Science fiction"
+        />
+      </div>
+
+      {status === "finished" && (
+        <div className="field">
+          <label>Finished date</label>
+          <input
+            type="date"
+            value={finishedDate}
+            onChange={(e) => setFinishedDate(e.target.value)}
+          />
+        </div>
+      )}
 
       <div className="field">
         <label>Rating</label>

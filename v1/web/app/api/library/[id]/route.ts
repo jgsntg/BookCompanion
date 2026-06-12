@@ -31,6 +31,8 @@ export async function PATCH(
       rating?: number | null;
       current_chapter?: number;
       note?: string | null;
+      category?: string | null;
+      blurb?: string | null;
       updated_at?: string;
     } = {};
 
@@ -40,14 +42,25 @@ export async function PATCH(
       }
       updates.reading_status = body.reading_status;
 
-      // Auto-set finished_at on transition into 'finished'.
-      if (body.reading_status === "finished" && existing.reading_status !== "finished") {
-        updates.finished_at = new Date().toISOString();
+      // Auto-manage finished_at on status transitions, unless the caller
+      // is explicitly setting finished_at in this same request.
+      if (body.finished_at === undefined) {
+        // Auto-set finished_at on transition into 'finished'.
+        if (body.reading_status === "finished" && existing.reading_status !== "finished") {
+          updates.finished_at = new Date().toISOString();
+        }
+        // Clear finished_at if moving back out of finished.
+        if (body.reading_status !== "finished" && existing.reading_status === "finished") {
+          updates.finished_at = null;
+        }
       }
-      // Clear finished_at if moving back out of finished.
-      if (body.reading_status !== "finished" && existing.reading_status === "finished") {
-        updates.finished_at = null;
+    }
+
+    if (body.finished_at !== undefined) {
+      if (body.finished_at !== null && typeof body.finished_at !== "string") {
+        return NextResponse.json({ error: "finished_at must be a date string or null" }, { status: 400 });
       }
+      updates.finished_at = body.finished_at;
     }
 
     if (body.rating !== undefined) {
@@ -59,6 +72,14 @@ export async function PATCH(
 
     if (body.current_chapter !== undefined) {
       updates.current_chapter = body.current_chapter;
+    }
+
+    if (body.category !== undefined) {
+      updates.category = typeof body.category === "string" ? body.category.trim() || null : null;
+    }
+
+    if (body.blurb !== undefined) {
+      updates.blurb = typeof body.blurb === "string" ? body.blurb.trim() || null : null;
     }
 
     // Note handling is special: text changes → delete old note chunks, embed new one.
