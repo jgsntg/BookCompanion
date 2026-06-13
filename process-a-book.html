@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookCompanion — Processing a Book</title>
+<style>
+  :root {
+    --ink: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --code-bg: #f6f8fa;
+    --border: #d8dee4;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 2rem;
+  }
+  h2 {
+    font-size: 1.2rem;
+    margin-top: 2.2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+  }
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.88rem;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.88rem;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+  ul {
+    padding-left: 1.4rem;
+  }
+  .note {
+    background: #fff8c5;
+    border: 1px solid #d4a72c;
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.92rem;
+    margin: 0.8rem 0;
+  }
+  .alt {
+    margin-top: 2.5rem;
+    padding-top: 0.5rem;
+    border-top: 2px solid var(--border);
+  }
+  footer {
+    margin-top: 3rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>Processing a Book</h1>
+<p class="subtitle">The end-to-end flow from EPUB/PDF to a queryable book in the app.</p>
+
+<h2><span class="step-number">1</span>Get the file in place</h2>
+<p>Put the EPUB (or PDF) somewhere under <code>v0/</code> — e.g. <code>v0/SomeBook.epub</code>.</p>
+
+<h2><span class="step-number">2</span>Run extraction (v0)</h2>
+<pre><code>cd v0
+source .venv/bin/activate
+python src/extract.py path/to/book.epub</code></pre>
+<ul>
+  <li>Detects fiction vs. nonfiction, then runs LLM extraction chapter by chapter (claims, frameworks, passages, connections, open questions)</li>
+  <li>Writes <code>output/{book-slug}.json</code></li>
+  <li>Provider/model defaults to Anthropic Claude; pass <code>--provider openai</code> to use GPT instead</li>
+  <li>To re-run specific chapters only: <code>--chapters 1-10</code> (range), <code>1,3,5</code> (list), or both</li>
+</ul>
+<div class="note">Cost ballpark: ~$0.30–$0.80 per book (Sonnet, ~25 chapters).</div>
+
+<h2><span class="step-number">3</span>Ingest into Supabase (v1)</h2>
+<pre><code>cd v1/scripts
+source .venv/bin/activate
+python ingest_supabase.py ../../v0/output/{book-slug}.json</code></pre>
+<ul>
+  <li>Reads the extraction JSON, embeds chunks via Voyage (<code>voyage-3-lite</code>), and writes everything to Supabase</li>
+  <li>Requires <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, and <code>VOYAGE_API_KEY</code> in <code>v1/scripts/.env</code></li>
+  <li>Re-ingesting the same book updates it via its <code>dedupe_key</code> — safe to run again after fixing the extraction</li>
+</ul>
+
+<h2><span class="step-number">4</span>Open it in the app</h2>
+<pre><code>cd v1/web
+npm run dev</code></pre>
+<ul>
+  <li>Visit <a href="http://localhost:3000">http://localhost:3000</a></li>
+  <li>The book appears in your library with status automatically set to <strong>Reading</strong></li>
+  <li>Open the book and use the query box to ask questions — retrieval + synthesis is scoped to that book</li>
+</ul>
+
+<h2><span class="step-number">5</span>Wrap up</h2>
+<ul>
+  <li>Mark the book <strong>Finished</strong> when done (sets <code>finished_at</code> automatically)</li>
+  <li>Add a rating and a short note — notes are embedded too, so they're searchable alongside the extracted content</li>
+</ul>
+
+<div class="alt">
+  <h2>Logging a book without an EPUB</h2>
+  <ol>
+    <li>Go to <code>/library/add</code></li>
+    <li>Search Open Library to autofill, or type the title/author manually</li>
+    <li>Set status, rating, and a one-paragraph note → Add to library</li>
+  </ol>
+  <p>No chapter-level queries are available for these — just the note, embedded as a single searchable chunk.</p>
+</div>
+
+<footer>
+  See <code>v0/README.md</code> and <code>v1/README.md</code> for full setup details.
+</footer>
+
+</body>
+</html>

@@ -13,6 +13,7 @@ from pathlib import Path
 from llm_client import LLMClient
 
 MAX_TOKENS = 6000
+MAX_REPAIR_ATTEMPTS = 1
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
@@ -53,6 +54,17 @@ def build_prompt(
     )
 
 
+def _strip_fences(raw: str) -> str:
+    """Strip markdown code fences defensively."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1]
+        if raw.endswith("```"):
+            raw = raw.rsplit("```", 1)[0]
+        raw = raw.strip()
+    return raw
+
+
 def extract_chapter(
     client: LLMClient,
     *,
@@ -73,23 +85,35 @@ def extract_chapter(
         chapter_text=chapter_text,
     )
 
-    raw = client.complete(
+    raw = _strip_fences(client.complete(
         model=client.extraction_model,
         max_tokens=MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
-    ).strip()
+    ))
 
-    # Strip markdown fences defensively.
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1]
-        if raw.endswith("```"):
-            raw = raw.rsplit("```", 1)[0]
-        raw = raw.strip()
+    for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as e:
+            if attempt == MAX_REPAIR_ATTEMPTS:
+                raise ExtractionError(
+                    f"Chapter {chapter_number} returned invalid JSON: {e}\n\n"
+                    f"First 500 chars of response:\n{raw[:500]}"
+                ) from e
 
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ExtractionError(
-            f"Chapter {chapter_number} returned invalid JSON: {e}\n\n"
-            f"First 500 chars of response:\n{raw[:500]}"
-        ) from e
+            raw = _strip_fences(client.complete(
+                model=client.extraction_model,
+                max_tokens=MAX_TOKENS,
+                messages=[
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": raw},
+                    {"role": "user", "content": (
+                        f"That response was not valid JSON: {e}\n\n"
+                        "Return the corrected JSON only — same content, fixed "
+                        "syntax. No markdown fences, no commentary."
+                    )},
+                ],
+            ))
+
+    # Unreachable, but keeps type-checkers happy.
+    raise ExtractionError(f"Chapter {chapter_number}: exhausted repair attempts")
