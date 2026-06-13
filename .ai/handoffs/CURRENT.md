@@ -1,3 +1,3 @@
 # Current handoff
 
-Read: `.ai/handoffs/2026-05-10-ai-product-playbook-dedupe.md`
+Read: `.ai/handoffs/2026-06-11-handoff-command-review.md`
