@@ -1,3 +1,1 @@
-# Current handoff
-
-Read: `.ai/handoffs/2026-06-11-handoff-command-review.md`
+2026-06-14-how-i-read-and-library-ops.md
