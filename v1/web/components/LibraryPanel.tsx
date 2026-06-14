@@ -29,6 +29,7 @@ export default function LibraryPanel({ bookId, initial }: Props) {
   const [finishedDate, setFinishedDate] = useState<string>(initial.finished_at?.slice(0, 10) ?? "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [, startTransition] = useTransition();
 
   function onStatusChange(next: Status) {
@@ -45,6 +46,25 @@ export default function LibraryPanel({ bookId, initial }: Props) {
     (note || null) !== (initial.note ?? null) ||
     (category || null) !== (initial.category ?? null) ||
     (status === "finished" ? finishedDate : "") !== initialFinishedDate;
+
+  async function deleteBook() {
+    if (
+      !confirm(
+        "Delete this book from your library? This removes its status, rating, note, and (if ingested) all chapters and chunks. This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/library/${bookId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Delete failed");
+      router.push("/library");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+      setDeleting(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -141,6 +161,14 @@ export default function LibraryPanel({ bookId, initial }: Props) {
         </button>
         {savedAt && !dirty && <span className="indicator">Saved {savedAt.toLocaleTimeString()}</span>}
         {dirty && !saving && <span className="indicator">Unsaved changes</span>}
+        <button
+          className="button danger"
+          onClick={deleteBook}
+          disabled={deleting}
+          style={{ marginLeft: "auto" }}
+        >
+          {deleting ? "Deleting…" : "Delete book"}
+        </button>
       </div>
     </div>
   );
