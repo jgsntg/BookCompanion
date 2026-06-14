@@ -393,6 +393,30 @@ h3 { font-size: 13px; margin: 32px 0 12px; color: var(--muted); font-weight: 600
 .error { color: var(--error-fg); padding: 12px 16px; background: var(--error-bg); border-radius: 8px; margin: 16px 0; }
 
 /* How I Read */
+.period-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.period-tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  text-decoration: none;
+}
+.period-tab:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+.period-tab.active {
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .bar-chart {
   display: flex;
   align-items: flex-end;
@@ -409,6 +433,16 @@ h3 { font-size: 13px; margin: 32px 0 12px; color: var(--muted); font-weight: 600
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-radius: 6px;
+  padding: 4px 2px;
+  text-decoration: none;
+}
+.bar-chart-col:hover {
+  background: var(--code-bg);
+  text-decoration: none;
+}
+.bar-chart-col:hover .bar-chart-label {
+  color: var(--accent);
 }
 .bar-chart-bar {
   width: 100%;
@@ -450,6 +484,17 @@ h3 { font-size: 13px; margin: 32px 0 12px; color: var(--muted); font-weight: 600
   align-items: center;
   gap: 12px;
   font-size: 14px;
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  text-decoration: none;
+}
+.category-row:hover {
+  background: var(--code-bg);
+  text-decoration: none;
+}
+.category-row:hover .category-label {
+  color: var(--accent);
 }
 .category-label {
   color: var(--fg);

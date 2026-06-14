@@ -7,12 +7,15 @@ Usage:
 
 Input JSON is a list of objects:
     [
-      {"title": "...", "author": "...", "category": "...", "status": "want_to_read"},
+      {"title": "...", "author": "...", "category": "...", "status": "finished", "finished_at": "2025-06-24"},
       ...
     ]
 
 "status" is optional and defaults to "want_to_read". Valid values:
     want_to_read | reading | finished | abandoned
+
+"finished_at" is optional (format "YYYY-MM-DD"). Only used when status is
+"finished"; if omitted, defaults to the current time.
 
 For each book this script:
   - Computes the dedupe_key (same algorithm as web/lib/dedupe.ts) and skips
@@ -128,6 +131,15 @@ def main() -> int:
             failed += 1
             continue
 
+        finished_at_input = entry.get("finished_at")
+        if finished_at_input:
+            try:
+                datetime.strptime(finished_at_input, "%Y-%m-%d")
+            except ValueError:
+                print(f"  SKIP  {title} — finished_at must be 'YYYY-MM-DD', got '{finished_at_input}'")
+                failed += 1
+                continue
+
         dedupe_key = make_dedupe_key(title, author)
         existing = get_existing_book(client, dedupe_key)
         if existing:
@@ -137,6 +149,11 @@ def main() -> int:
 
         cover_url = None if args.no_cover else lookup_cover(title, author)
 
+        if status == "finished":
+            finished_at = f"{finished_at_input}T00:00:00Z" if finished_at_input else utc_now()
+        else:
+            finished_at = None
+
         body = {
             "title": title,
             "author": author,
@@ -144,7 +161,7 @@ def main() -> int:
             "reading_status": status,
             "category": category,
             "cover_url": cover_url,
-            "finished_at": utc_now() if status == "finished" else None,
+            "finished_at": finished_at,
         }
 
         client.request("POST", "/books", body, prefer="return=minimal")
