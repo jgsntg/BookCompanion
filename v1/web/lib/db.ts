@@ -7,6 +7,12 @@ type Json = Record<string, unknown> | unknown[];
 export type ReadingStatus = "want_to_read" | "reading" | "finished" | "abandoned";
 export type BookType = "fiction" | "nonfiction";
 
+export interface RecommendationItem {
+  title: string;
+  author: string;
+  reason: string;
+}
+
 export interface BookRow {
   id: number;
   title: string;
@@ -25,6 +31,9 @@ export interface BookRow {
   current_chapter: number;
   ingest_status: "none" | "processing" | "ready" | "failed";
   book_type: BookType | null;
+  queue_position: number | null;
+  recommendations: RecommendationItem[] | null;
+  recommendations_generated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +67,7 @@ export interface LibraryBookRow {
   category: string | null;
   is_ingested: boolean;
   finished_at: string | null;
+  queue_position: number | null;
   created_at: string;
   updated_at: string;
   chunk_count: number;
@@ -107,6 +117,7 @@ export async function listLibraryBooks(status?: ReadingStatus): Promise<LibraryB
       category,
       is_ingested,
       finished_at,
+      queue_position,
       created_at,
       updated_at,
       chunks(count)
@@ -130,6 +141,7 @@ export async function listLibraryBooks(status?: ReadingStatus): Promise<LibraryB
       category: book.category,
       is_ingested: book.is_ingested,
       finished_at: book.finished_at,
+      queue_position: book.queue_position,
       created_at: book.created_at,
       updated_at: book.updated_at,
       chunk_count: book.chunks?.[0]?.count ?? 0,
@@ -202,6 +214,103 @@ export async function deleteBook(id: number): Promise<boolean> {
   const { error, count } = await supabase.from("books").delete({ count: "exact" }).eq("id", id);
   if (error) throw error;
   return (count ?? 0) > 0;
+}
+
+export async function getQueue(limit?: number): Promise<LibraryBookRow[]> {
+  const supabase = getSupabase();
+  let query = supabase
+    .from("books")
+    .select(`
+      id,
+      title,
+      author,
+      reading_status,
+      rating,
+      cover_url,
+      category,
+      is_ingested,
+      finished_at,
+      queue_position,
+      created_at,
+      updated_at,
+      chunks(count)
+    `)
+    .eq("reading_status", "want_to_read")
+    .not("queue_position", "is", null)
+    .order("queue_position", { ascending: true });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? []).map((book) => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    reading_status: book.reading_status,
+    rating: book.rating,
+    cover_url: book.cover_url,
+    category: book.category,
+    is_ingested: book.is_ingested,
+    finished_at: book.finished_at,
+    queue_position: book.queue_position,
+    created_at: book.created_at,
+    updated_at: book.updated_at,
+    chunk_count: book.chunks?.[0]?.count ?? 0,
+  }));
+}
+
+export async function getUnqueuedWantToRead(): Promise<LibraryBookRow[]> {
+  const books = await listLibraryBooks("want_to_read");
+  return books.filter((b) => b.queue_position === null);
+}
+
+export async function addToQueue(bookId: number): Promise<void> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("books")
+    .select("queue_position")
+    .eq("reading_status", "want_to_read")
+    .not("queue_position", "is", null)
+    .order("queue_position", { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+
+  const nextPosition = (data?.[0]?.queue_position ?? 0) + 1;
+  await updateBook(bookId, { queue_position: nextPosition });
+}
+
+export async function removeFromQueue(bookId: number): Promise<void> {
+  await updateBook(bookId, { queue_position: null });
+}
+
+export async function reorderQueue(orderedIds: number[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, index) => updateBook(id, { queue_position: index + 1 }))
+  );
+}
+
+export async function saveRecommendations(
+  bookId: number,
+  recommendations: RecommendationItem[]
+): Promise<string> {
+  const generatedAt = new Date().toISOString();
+  await updateBook(bookId, {
+    recommendations,
+    recommendations_generated_at: generatedAt,
+  });
+  return generatedAt;
+}
+
+export async function listLibraryTitles(): Promise<Array<{ title: string; author: string }>> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from("books").select("title, author");
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function replaceNoteChunk(bookId: number, note: string | null, embedding?: number[]): Promise<void> {

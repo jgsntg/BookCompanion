@@ -392,6 +392,56 @@ h3 { font-size: 13px; margin: 32px 0 12px; color: var(--muted); font-weight: 600
 .empty { color: var(--muted); font-style: italic; }
 .error { color: var(--error-fg); padding: 12px 16px; background: var(--error-bg); border-radius: 8px; margin: 16px 0; }
 
+.small-cover {
+  width: 36px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--code-bg);
+}
+
+/* Reading queue */
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.queue-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.queue-row-body { flex: 1; min-width: 0; }
+.queue-row-body .title {
+  font-weight: 600;
+  font-size: 14px;
+  display: block;
+}
+.queue-row-body .meta { font-size: 12px; color: var(--muted); }
+.queue-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.button.ghost.icon { padding: 6px 10px; line-height: 1; }
+
+/* Recommendations */
+.rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rec-card {
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.rec-card-header .title { font-weight: 600; }
+.rec-card-header .meta { font-size: 13px; color: var(--muted); }
+.rec-reason { margin: 6px 0 10px; font-size: 14px; color: var(--muted); font-style: italic; }
+
 /* How I Read */
 .period-tabs {
   display: flex;

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getBook, getBookChapters } from "@/lib/db";
 import QueryBox from "@/components/QueryBox";
 import LibraryPanel from "@/components/LibraryPanel";
+import Recommendations from "@/components/Recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,7 @@ export default async function BookPage({ params }: PageProps) {
           note: book.note,
           category: book.category,
           finished_at: book.finished_at,
+          queue_position: book.queue_position,
         }}
       />
 
@@ -198,6 +200,14 @@ export default async function BookPage({ params }: PageProps) {
           <code>python scripts/ingest.py …</code>. Your status, rating, and note will
           carry over.
         </p>
+      )}
+
+      {book.reading_status === "finished" && (
+        <Recommendations
+          bookId={book.id}
+          initial={book.recommendations}
+          generatedAt={book.recommendations_generated_at}
+        />
       )}
     </main>
   );

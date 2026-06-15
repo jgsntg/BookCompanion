@@ -13,6 +13,7 @@ interface Props {
     note: string | null;
     category: string | null;
     finished_at: string | null;
+    queue_position: number | null;
   };
 }
 
@@ -30,6 +31,7 @@ export default function LibraryPanel({ bookId, initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [queueBusy, setQueueBusy] = useState(false);
   const [, startTransition] = useTransition();
 
   function onStatusChange(next: Status) {
@@ -63,6 +65,20 @@ export default function LibraryPanel({ bookId, initial }: Props) {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
       setDeleting(false);
+    }
+  }
+
+  async function toggleQueue() {
+    setQueueBusy(true);
+    try {
+      const method = initial.queue_position === null ? "POST" : "DELETE";
+      const res = await fetch(`/api/library/${bookId}/queue`, { method });
+      if (!res.ok) throw new Error((await res.json()).error || "Queue update failed");
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Queue update failed");
+    } finally {
+      setQueueBusy(false);
     }
   }
 
@@ -102,6 +118,26 @@ export default function LibraryPanel({ bookId, initial }: Props) {
           <option value="abandoned">Abandoned</option>
         </select>
       </div>
+
+      {initial.reading_status === "want_to_read" && (
+        <div className="field">
+          <label>Reading queue</label>
+          <div>
+            {initial.queue_position !== null && (
+              <span style={{ color: "var(--muted)", fontSize: 13, marginRight: 10 }}>
+                #{initial.queue_position} in queue
+              </span>
+            )}
+            <button type="button" className="button ghost" onClick={toggleQueue} disabled={queueBusy}>
+              {queueBusy
+                ? "Updating…"
+                : initial.queue_position !== null
+                ? "Remove from queue"
+                : "+ Add to reading queue"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="field">
         <label>Category</label>

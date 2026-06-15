@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { listLibraryBooks } from "@/lib/db";
+import { getQueue, listLibraryBooks } from "@/lib/db";
 import BookCard from "@/components/BookCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const books = await listLibraryBooks("reading");
+  const [books, upNext] = await Promise.all([listLibraryBooks("reading"), getQueue(5)]);
 
   return (
     <main className="container">
@@ -23,6 +23,22 @@ export default async function HomePage() {
             <BookCard key={b.id} book={b} />
           ))}
         </div>
+      )}
+
+      {upNext.length > 0 && (
+        <>
+          <h2>
+            Up Next{" "}
+            <Link href="/queue" style={{ fontSize: 13, fontWeight: 400 }}>
+              Manage queue →
+            </Link>
+          </h2>
+          <div className="book-grid">
+            {upNext.map((b) => (
+              <BookCard key={b.id} book={b} />
+            ))}
+          </div>
+        </>
       )}
     </main>
   );
